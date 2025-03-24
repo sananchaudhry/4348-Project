@@ -6,40 +6,64 @@ import java.util.Scanner;
 public class Driver {
     private Process loggerProcess;
     private Process encryptionProcess;
-    private PrintWriter loggerInput;
-    private PrintWriter encryptionInput;
-    private Scanner encryptionOutput;
+    private BufferedReader encryptionReader;
+    private BufferedWriter encryptionWriter;
+    private BufferedReader loggerReader;
+    private BufferedWriter loggerWriter;
     private List<String> history = new ArrayList<>();
-    
+    private Scanner userInput;
+
     public Driver(String logFileName) throws IOException {
         // Start logger process
-        loggerProcess = Runtime.getRuntime().exec("java Logger " + logFileName);
-        loggerInput = new PrintWriter(loggerProcess.getOutputStream(), true);
-        
+        ProcessBuilder loggerBuilder = new ProcessBuilder("java", "Logger", logFileName);
+        loggerProcess = loggerBuilder.start();
+        loggerWriter = new BufferedWriter(new OutputStreamWriter(loggerProcess.getOutputStream()));
+        loggerReader = new BufferedReader(new InputStreamReader(loggerProcess.getInputStream()));
+
         // Start encryption process
-        encryptionProcess = Runtime.getRuntime().exec("java Encryption");
-        encryptionInput = new PrintWriter(encryptionProcess.getOutputStream(), true);
-        encryptionOutput = new Scanner(encryptionProcess.getInputStream());
-        
+        ProcessBuilder encryptionBuilder = new ProcessBuilder("java", "Encryption");
+        encryptionProcess = encryptionBuilder.start();
+        encryptionWriter = new BufferedWriter(new OutputStreamWriter(encryptionProcess.getOutputStream()));
+        encryptionReader = new BufferedReader(new InputStreamReader(encryptionProcess.getInputStream()));
+
         // Log start of driver program
-        loggerInput.println("START Driver program started");
+        log("START Driver program started");
+
+        userInput = new Scanner(System.in);
     }
-    
-    public void close() {
+
+    private void log(String message) throws IOException {
+        loggerWriter.write(message);
+        loggerWriter.newLine();
+        loggerWriter.flush();
+    }
+
+    private String sendToEncryption(String command) throws IOException {
+        encryptionWriter.write(command);
+        encryptionWriter.newLine();
+        encryptionWriter.flush();
+        return encryptionReader.readLine();
+    }
+
+    private void close() throws IOException {
         // Log end of driver program
-        loggerInput.println("END Driver program ended");
-        
-        // Send QUIT command to both processes
-        loggerInput.println("QUIT");
-        encryptionInput.println("QUIT");
-        
+        log("END Driver program ended");
+
+        // Send QUIT to both processes
+        sendToEncryption("QUIT");
+        loggerWriter.write("QUIT");
+        loggerWriter.newLine();
+        loggerWriter.flush();
+
         // Close resources
-        loggerInput.close();
-        encryptionInput.close();
-        encryptionOutput.close();
+        encryptionWriter.close();
+        encryptionReader.close();
+        loggerWriter.close();
+        loggerReader.close();
+        userInput.close();
     }
-    
-    public void showMenu() {
+
+    private void showMenu() {
         System.out.println("\n===== Encryption Program =====");
         System.out.println("1. Set Password");
         System.out.println("2. Encrypt");
@@ -48,245 +72,174 @@ public class Driver {
         System.out.println("5. Quit");
         System.out.print("Enter your choice: ");
     }
-    
-    public void showHistory() {
+
+    private void showHistory() {
         if (history.isEmpty()) {
             System.out.println("History is empty.");
             return;
         }
-        
+
         System.out.println("\n===== History =====");
         for (int i = 0; i < history.size(); i++) {
             System.out.println((i + 1) + ". " + history.get(i));
         }
     }
-    
-    public String getStringFromUserOrHistory(Scanner scanner, String prompt) {
-        if (history.isEmpty()) {
+
+    private String getInput(String prompt, boolean fromHistory) throws IOException {
+        if (!fromHistory || history.isEmpty()) {
             System.out.print(prompt);
-            return scanner.nextLine();
-        }
-        
-        System.out.println("1. Enter a new string");
-        System.out.println("2. Use a string from history");
-        System.out.print("Enter your choice: ");
-        int choice = Integer.parseInt(scanner.nextLine());
-        
-        if (choice == 1) {
-            System.out.print(prompt);
-            return scanner.nextLine();
-        } else if (choice == 2) {
-            showHistory();
-            System.out.print("Enter the number of the string to use (0 to cancel): ");
-            int historyIndex = Integer.parseInt(scanner.nextLine());
-            
-            if (historyIndex <= 0 || historyIndex > history.size()) {
+            String input = userInput.nextLine().toUpperCase();
+
+            // Validate input contains only letters
+            if (!input.matches("^[A-Z]+$")) {
+                System.out.println("Error: Input must contain only letters.");
+                log("ERROR Input must contain only letters");
                 return null;
             }
-            
-            return history.get(historyIndex - 1);
+
+            history.add(input);
+            return input;
         }
-        
-        return null;
-    }
-    
-    public void setPassword(Scanner scanner) {
-        String password = getStringFromUserOrHistory(scanner, "Enter password: ");
-        if (password == null) {
-            return;
-        }
-        
-        // Check if password contains only letters
-        boolean containsNonLetter = false;
-        for (char c : password.toCharArray()) {
-            if (!Character.isLetter(c)) {
-                containsNonLetter = true;
-                break;
+
+        // History selection
+        while (true) {
+            showHistory();
+            System.out.println("0. Enter a new string");
+            System.out.print("Select a string from history (0-" + history.size() + "): ");
+
+            try {
+                int choice = Integer.parseInt(userInput.nextLine());
+
+                if (choice == 0) {
+                    System.out.print(prompt);
+                    String input = userInput.nextLine().toUpperCase();
+
+                    // Validate input contains only letters
+                    if (!input.matches("^[A-Z]+$")) {
+                        System.out.println("Error: Input must contain only letters.");
+                        log("ERROR Input must contain only letters");
+                        return null;
+                    }
+
+                    history.add(input);
+                    return input;
+                }
+
+                if (choice < 1 || choice > history.size()) {
+                    System.out.println("Invalid selection.");
+                    continue;
+                }
+
+                return history.get(choice - 1);
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a valid number.");
             }
         }
-        
-        if (containsNonLetter) {
-            System.out.println("Error: Password must contain only letters.");
-            return;
-        }
-        
-        // Send command to encryption program
-        encryptionInput.println("PASS " + password);
-        
-        // Get response from encryption program
-        String response = encryptionOutput.nextLine();
-        
-        // Log command (without revealing the password)
-        loggerInput.println("COMMAND password");
-        
-        // Check response
-        String[] responseParts = response.split(" ", 2);
-        String responseType = responseParts[0];
-        String responseMessage = responseParts.length > 1 ? responseParts[1] : "";
-        
-        if (responseType.equals("ERROR")) {
-            System.out.println("Error: " + responseMessage);
-            loggerInput.println("ERROR " + responseMessage);
-        } else {
+    }
+
+    private void setPassword() throws IOException {
+        // Log the password command without revealing the password
+        log("COMMAND password");
+
+        String password = getInput("Enter password: ", false);
+        if (password == null) return;
+
+        // Send password to encryption program
+        String response = sendToEncryption("PASS " + password);
+
+        // Process response
+        if (response.startsWith("RESULT")) {
             System.out.println("Password set successfully.");
-            loggerInput.println("RESULT Password set successfully");
-        }
-    }
-    
-    public void encrypt(Scanner scanner) {
-        String text = getStringFromUserOrHistory(scanner, "Enter text to encrypt: ");
-        if (text == null) {
-            return;
-        }
-        
-        // Check if text contains only letters
-        boolean containsNonLetter = false;
-        for (char c : text.toCharArray()) {
-            if (!Character.isLetter(c)) {
-                containsNonLetter = true;
-                break;
-            }
-        }
-        
-        if (containsNonLetter) {
-            System.out.println("Error: Text must contain only letters.");
-            loggerInput.println("ERROR Text must contain only letters");
-            return;
-        }
-        
-        // Add to history if it's a new entry
-        if (!history.contains(text)) {
-            history.add(text);
-        }
-        
-        // Send command to encryption program
-        encryptionInput.println("ENCRYPT " + text);
-        
-        // Get response from encryption program
-        String response = encryptionOutput.nextLine();
-        
-        // Log command
-        loggerInput.println("COMMAND encrypt " + text);
-        
-        // Check response
-        String[] responseParts = response.split(" ", 2);
-        String responseType = responseParts[0];
-        String responseMessage = responseParts.length > 1 ? responseParts[1] : "";
-        
-        if (responseType.equals("ERROR")) {
-            System.out.println("Error: " + responseMessage);
-            loggerInput.println("ERROR " + responseMessage);
+            log("RESULT Password set successfully");
         } else {
-            System.out.println("Encrypted result: " + responseMessage);
-            loggerInput.println("RESULT " + responseMessage);
-            
-            // Add result to history
-            if (!history.contains(responseMessage)) {
-                history.add(responseMessage);
-            }
+            System.out.println("Error setting password: " + response.substring(6));
+            log("ERROR " + response.substring(6));
         }
     }
-    
-    public void decrypt(Scanner scanner) {
-        String text = getStringFromUserOrHistory(scanner, "Enter text to decrypt: ");
-        if (text == null) {
-            return;
-        }
-        
-        // Check if text contains only letters
-        boolean containsNonLetter = false;
-        for (char c : text.toCharArray()) {
-            if (!Character.isLetter(c)) {
-                containsNonLetter = true;
-                break;
-            }
-        }
-        
-        if (containsNonLetter) {
-            System.out.println("Error: Text must contain only letters.");
-            loggerInput.println("ERROR Text must contain only letters");
-            return;
-        }
-        
-        // Add to history if it's a new entry
-        if (!history.contains(text)) {
-            history.add(text);
-        }
-        
-        // Send command to encryption program
-        encryptionInput.println("DECRYPT " + text);
-        
-        // Get response from encryption program
-        String response = encryptionOutput.nextLine();
-        
-        // Log command
-        loggerInput.println("COMMAND decrypt " + text);
-        
-        // Check response
-        String[] responseParts = response.split(" ", 2);
-        String responseType = responseParts[0];
-        String responseMessage = responseParts.length > 1 ? responseParts[1] : "";
-        
-        if (responseType.equals("ERROR")) {
-            System.out.println("Error: " + responseMessage);
-            loggerInput.println("ERROR " + responseMessage);
+
+    private void encrypt() throws IOException {
+        log("COMMAND encrypt");
+
+        String text = getInput("Enter text to encrypt: ", true);
+        if (text == null) return;
+
+        // Send encrypt command to encryption program
+        String response = sendToEncryption("ENCRYPT " + text);
+
+        // Process response
+        if (response.startsWith("RESULT")) {
+            String encryptedText = response.substring(7);
+            System.out.println("Encrypted text: " + encryptedText);
+            log("RESULT " + encryptedText);
+            history.add(encryptedText);
         } else {
-            System.out.println("Decrypted result: " + responseMessage);
-            loggerInput.println("RESULT " + responseMessage);
-            
-            // Add result to history
-            if (!history.contains(responseMessage)) {
-                history.add(responseMessage);
+            System.out.println("Encryption error: " + response.substring(6));
+            log("ERROR " + response.substring(6));
+        }
+    }
+
+    private void decrypt() throws IOException {
+        log("COMMAND decrypt");
+
+        String text = getInput("Enter text to decrypt: ", true);
+        if (text == null) return;
+
+        // Send decrypt command to encryption program
+        String response = sendToEncryption("DECRYPT " + text);
+
+        // Process response
+        if (response.startsWith("RESULT")) {
+            String decryptedText = response.substring(7);
+            System.out.println("Decrypted text: " + decryptedText);
+            log("RESULT " + decryptedText);
+            history.add(decryptedText);
+        } else {
+            System.out.println("Decryption error: " + response.substring(6));
+            log("ERROR " + response.substring(6));
+        }
+    }
+
+    public void run() throws IOException {
+        while (true) {
+            showMenu();
+
+            try {
+                int choice = Integer.parseInt(userInput.nextLine());
+
+                switch (choice) {
+                    case 1:
+                        setPassword();
+                        break;
+                    case 2:
+                        encrypt();
+                        break;
+                    case 3:
+                        decrypt();
+                        break;
+                    case 4:
+                        showHistory();
+                        break;
+                    case 5:
+                        close();
+                        return;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a valid number.");
             }
         }
     }
-    
+
     public static void main(String[] args) {
         if (args.length != 1) {
             System.err.println("Usage: java Driver <log-file-name>");
             System.exit(1);
         }
-        
-        String logFileName = args[0];
-        
+
         try {
-            Driver driver = new Driver(logFileName);
-            Scanner scanner = new Scanner(System.in);
-            
-            while (true) {
-                driver.showMenu();
-                int choice;
-                
-                try {
-                    choice = Integer.parseInt(scanner.nextLine());
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid choice. Please enter a number.");
-                    continue;
-                }
-                
-                switch (choice) {
-                    case 1:
-                        driver.setPassword(scanner);
-                        break;
-                    case 2:
-                        driver.encrypt(scanner);
-                        break;
-                    case 3:
-                        driver.decrypt(scanner);
-                        break;
-                    case 4:
-                        driver.showHistory();
-                        break;
-                    case 5:
-                        driver.close();
-                        System.out.println("Goodbye!");
-                        scanner.close();
-                        return;
-                    default:
-                        System.out.println("Invalid choice. Please try again.");
-                        break;
-                }
-            }
+            Driver driver = new Driver(args[0]);
+            driver.run();
         } catch (IOException e) {
             System.err.println("Error starting processes: " + e.getMessage());
             e.printStackTrace();

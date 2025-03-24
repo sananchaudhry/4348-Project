@@ -62,3 +62,22 @@ Initial round of testing is done, and I made a bunch of changes to Encryption.ja
 3. Removed multiple public methods in favor of a single method that processes all commands
 4. Simplified main() method to directly use processCommand()
 
+March 24 6:45 PM
+Further testing is complete and changes to driver program have been made:
+Input validation:
+Only allows alphabetic characters
+Converts input to uppercase
+Prevents non-letter inputs
+
+Inter-process communication:
+Uses ProcessBuilder for creating processes
+Uses BufferedReader/Writer for communication
+
+Logging:
+Logs all commands and results
+Does not log passwords
+
+History management:
+Allows selecting from history
+Option to enter new strings
+Stores both input and output strings
