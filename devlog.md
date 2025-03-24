@@ -29,3 +29,9 @@ Logger.java:
 Was indeed pretty simple, just the two functions I had outlined yesterday that needed to be implemented. 
 
 Encryption.java
+Learning to apply the vigenere cypher function and using ascii codes for alphabetical letters was a little tedious but 
+I belive I managed to make it work. Will have to test along with Driver to make sure there isnt any weird bugs.
+
+Driver.java:
+Not too difficult just tedious making sure everything aligned with the other programs and functions. Figuring out that I can 
+Just use java.lang.character was also helpful with the containsNonLetter function. 
