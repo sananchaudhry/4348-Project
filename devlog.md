@@ -35,3 +35,21 @@ I belive I managed to make it work. Will have to test along with Driver to make 
 Driver.java:
 Not too difficult just tedious making sure everything aligned with the other programs and functions. Figuring out that I can 
 Just use java.lang.character was also helpful with the containsNonLetter function. 
+
+March 24, 3:15 PM
+
+Time to start testing my implementation. I already have some test cases laid out along with the one mentioned in the project description
+Hopefully this will be the last hard session before submitting. 
+
+Test case provided in project description: 
+Input:   ENCRYPT HELLO
+Output: ERROR Password not set
+• Input: PASSKEY HELLO
+Output: RESULT
+• Input: ENCRYPT HELLO
+Output: RESULT OIWWC
+
+For encryption testing, test with passkey and without passkey and make sure output is correct. There should be valid error messages
+for non-alphabetical characters
+
+For log testing, correct timestamp should be there and all characters including special ones should be logged. Should quit.
