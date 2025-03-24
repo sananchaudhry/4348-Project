@@ -53,3 +53,12 @@ For encryption testing, test with passkey and without passkey and make sure outp
 for non-alphabetical characters
 
 For log testing, correct timestamp should be there and all characters including special ones should be logged. Should quit.
+
+March 24, 5:40 PM
+
+Initial round of testing is done, and I made a bunch of changes to Encryption.java. Here is a summary of the changes:
+1. Added a centralized processCommand() method that handles all command routing and processing
+2. Simplified error handling to strictly output "RESULT" or "ERROR" responses
+3. Removed multiple public methods in favor of a single method that processes all commands
+4. Simplified main() method to directly use processCommand()
+
