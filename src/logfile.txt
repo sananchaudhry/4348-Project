@@ -1,0 +1,18 @@
+2025-03-24 14:00 [START] Driver program started
+2025-03-24 14:01 [COMMAND] encrypt HELLO
+2025-03-24 14:01 [ERROR] Password not set
+2025-03-24 14:01 [COMMAND] decrypt HELLO
+2025-03-24 14:01 [ERROR] Password not set
+2025-03-24 14:01 [COMMAND] encrypt HELLO
+2025-03-24 14:01 [ERROR] Password not set
+2025-03-24 14:01 [COMMAND] decrypt HELLO
+2025-03-24 14:01 [ERROR] Password not set
+2025-03-24 14:01 [COMMAND] password
+2025-03-24 14:01 [RESULT] Password set successfully
+2025-03-24 14:02 [COMMAND] encrypt YO
+2025-03-24 14:02 [RESULT] FS
+2025-03-24 14:02 [END] Driver program ended
+2025-03-24 14:07 [START] Application staretd
+2025-03-24 14:07 [message] 1
+2025-03-24 14:07 [message] 2
+2025-03-24 14:07 [test] 

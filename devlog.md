@@ -21,3 +21,11 @@ Decrypt,
 Show History,
 Quit) 
 work with the other programs. 
+
+March 24, 3:00 PM
+First full implementation done. Will start testing with cases. Here are some thoughts I had for each program. 
+
+Logger.java: 
+Was indeed pretty simple, just the two functions I had outlined yesterday that needed to be implemented. 
+
+Encryption.java
